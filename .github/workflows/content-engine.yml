@@ -1,0 +1,110 @@
+name: Seth Content Engine
+
+on:
+  schedule:
+    - cron: "0 11 * * 1,3,5"
+    - cron: "0 12 * * 1,3,5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Generate a preview without sending email"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: content-engine
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check local delivery hour
+        id: guard
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if npm run --silent guard; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure git
+        if: steps.guard.outputs.proceed == 'true'
+        run: |
+          git config user.name "content-engine"
+          git config user.email "content-engine@users.noreply.github.com"
+
+      - name: Discover and rank videos
+        if: steps.guard.outputs.proceed == 'true'
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: npm run discover
+
+      - name: Commit discovery state
+        if: steps.guard.outputs.proceed == 'true'
+        run: |
+          git add state/engine.db
+          git diff --staged --quiet || git commit -m "state: discovery ${{ github.run_id }}"
+          git pull --rebase --autostash
+          git push
+
+      - name: Generate and deliver scripts
+        if: steps.guard.outputs.proceed == 'true'
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_FROM: ${{ vars.GMAIL_FROM }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: |
+          mkdir -p out
+          npm run publish
+
+      - name: Prune old state
+        if: steps.guard.outputs.proceed == 'true'
+        run: npm run prune
+
+      - name: Commit delivery state
+        if: steps.guard.outputs.proceed == 'true'
+        run: |
+          git add state/engine.db
+          git diff --staged --quiet || git commit -m "state: delivery ${{ github.run_id }}"
+          git pull --rebase --autostash
+          git push
+
+      - name: Upload preview
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.dry_run
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview
+          path: out/
+          if-no-files-found: ignore
+
+      - name: Alert on failure
+        if: failure() && steps.guard.outputs.proceed == 'true'
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_FROM: ${{ vars.GMAIL_FROM }}
+          FAILURE_REASON: "A step in the content engine workflow failed."
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: npm run notify-failure

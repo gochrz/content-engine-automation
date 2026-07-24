@@ -1,0 +1,30 @@
+{
+  "name": "seth-content-engine",
+  "version": "1.0.0",
+  "description": "Scheduled Instagram research and script adaptation pipeline for Seth Caslin",
+  "scripts": {
+    "discover": "node --experimental-sqlite --no-warnings --import tsx src/cli.ts discover",
+    "publish": "node --experimental-sqlite --no-warnings --import tsx src/cli.ts publish",
+    "status": "node --experimental-sqlite --no-warnings --import tsx src/cli.ts status",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-sqlite --no-warnings --import tsx scripts/test.ts",
+    "guard": "node --experimental-sqlite --no-warnings --import tsx src/cli.ts guard",
+    "notify-failure": "node --experimental-sqlite --no-warnings --import tsx src/cli.ts notify-failure",
+    "prune": "node --experimental-sqlite --no-warnings --import tsx src/cli.ts prune"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "nodemailer": "^9.0.3",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/nodemailer": "^8.0.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  },
+  "type": "module",
+  "private": true
+}

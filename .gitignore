@@ -1,0 +1,9 @@
+node_modules/
+out/
+.run-id
+.env
+*.log
+state/*.db-journal
+state/*.db-wal
+.DS_Store
+tmp/

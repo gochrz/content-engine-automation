@@ -1,0 +1,42 @@
+sources:
+  instagram:
+    - section8karim
+    - camm.olivera_
+    - pacemorby
+    - enterpriseselite
+    - richardgrandintaylor
+    - tyson_smith
+    - flipwithzach
+  tiktok: []
+
+discovery:
+  reelsPerProfile: 8
+  onlyPostsNewerThan: "45 days"
+  skipPinnedPosts: true
+
+qualification:
+  minPlays: 20000
+  minLikes: 1000
+  minDurationSeconds: 12
+  minTranscriptWords: 40
+  observationRuns: 2
+  minVelocityPlaysPerDay: 1500
+  maxAgeDaysToQualify: 45
+
+generation:
+  scriptsPerRun: 10
+  provider: openai
+  model: gpt-4o
+  maxPerCreatorPerRun: 2
+
+spend:
+  monthlyLimitUsd: 60
+  abortIfMonthToDateExceedsUsd: 55
+
+delivery:
+  timezone: America/New_York
+  hour: 7
+  to:
+    - ben@gochrz.com
+  fromName: Seth Content Engine
+  subjectPrefix: "Seth Content Scripts"
