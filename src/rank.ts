@@ -92,6 +92,26 @@ export function evaluate(store: Store, video: VideoRow, cfg: Config, now: Date):
   return { video, candidate: null, nextState: "observing", reason: "below threshold" };
 }
 
+export function refreshCandidates(store: Store, cfg: Config, now: Date): Candidate[] {
+  const allowed = new Set([
+    ...cfg.sources.instagram.map((creator) => `instagram:${creator}`),
+    ...cfg.sources.tiktok.map((creator) => `tiktok:${creator}`),
+  ]);
+  const candidates: Candidate[] = [];
+
+  for (const video of store.openVideos()) {
+    if (!allowed.has(`${video.platform}:${video.creator}`)) continue;
+    const evaluation = evaluate(store, video, cfg, now);
+    store.setState(video.platform, video.platform_id, evaluation.nextState, {
+      rejectReason: evaluation.reason ?? undefined,
+      score: evaluation.candidate?.score,
+    });
+    if (evaluation.candidate) candidates.push(evaluation.candidate);
+  }
+
+  return candidates;
+}
+
 export function selectTop(candidates: Candidate[], cfg: Config): Candidate[] {
   const sorted = [...candidates].sort((a, b) => b.score - a.score);
   const perCreator = new Map<string, number>();

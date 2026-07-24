@@ -6,7 +6,13 @@ import {
   normalizeInstagram,
 } from "../src/adapters/instagram.js";
 import { Store } from "../src/db.js";
-import { evaluate, selectTop, velocity, wordCount } from "../src/rank.js";
+import {
+  evaluate,
+  refreshCandidates,
+  selectTop,
+  velocity,
+  wordCount,
+} from "../src/rank.js";
 import {
   applyTranscriptResults,
   prepareCandidatesForGeneration,
@@ -483,7 +489,45 @@ section("9. Selection caps per creator");
   );
 }
 
-section("10. Generation retry and failure isolation");
+section("10. Saved discovery refresh");
+{
+  const cfg = loadConfig("config.yml");
+  const now = new Date();
+  const store = new Store(`${TMP}/refresh.db`);
+  const watched = normalizeInstagram([
+    reel({ id: "refresh-watched", shortCode: "refresh-watched" }),
+  ])[0];
+  const removed = normalizeInstagram([
+    reel({
+      id: "refresh-removed",
+      shortCode: "refresh-removed",
+      ownerUsername: "removedcreator",
+    }),
+  ])[0];
+
+  for (const video of [watched, removed]) {
+    store.upsertVideo(video, now.toISOString());
+    store.recordSnapshot({
+      platform: video.platform,
+      platform_id: video.platformId,
+      run_id: "refresh",
+      captured_at: now.toISOString(),
+      plays: video.plays,
+      likes: video.likes,
+      comments: video.comments,
+    });
+  }
+
+  const refreshed = refreshCandidates(store, cfg, now);
+  check("re-evaluates watched videos from saved discovery", refreshed.length === 1);
+  check(
+    "keeps removed creators out of future reports",
+    refreshed[0]?.video.creator === "pacemorby",
+  );
+  store.close();
+}
+
+section("11. Generation retry and failure isolation");
 {
   const cfg = loadConfig("config.yml");
   const candidate: Candidate = {
@@ -597,7 +641,7 @@ section("10. Generation retry and failure isolation");
   );
 }
 
-section("11. Email rendering");
+section("12. Email rendering");
 {
   const cfg = loadConfig("config.yml");
   const scripts = [
@@ -633,7 +677,7 @@ section("11. Email rendering");
   check("plain text alternative is non-empty", text.includes("Roof math"));
 }
 
-section("12. Script audit storage");
+section("13. Script audit storage");
 {
   const store = new Store(`${TMP}/script-audit.db`);
   store.startRun("audit-run", new Date().toISOString());
@@ -655,7 +699,7 @@ section("12. Script audit storage");
   store.close();
 }
 
-section("13. End to end via the CLI in fixture + dry-run mode");
+section("14. End to end via the CLI in fixture + dry-run mode");
 {
   rmSync(`${TMP}/e2e.db`, { force: true });
   rmSync("out", { recursive: true, force: true });
@@ -680,9 +724,9 @@ section("13. End to end via the CLI in fixture + dry-run mode");
         shortCode: `S${id}`,
         ownerUsername: c,
         timestamp: daysAgo(3 + j),
-        videoPlayCount: viral ? 220000 + i * 1000 : 4000,
-        videoViewCount: viral ? 120000 : 2000,
-        likesCount: viral ? 5000 + i * 50 : 60,
+        videoPlayCount: viral ? 220000 + i * 1000 : 1200,
+        videoViewCount: viral ? 120000 : 800,
+        likesCount: viral ? 5000 + i * 50 : 20,
         commentsCount: viral ? 300 : 5,
         transcript: j === 2 ? "too short" : LONG_TRANSCRIPT,
       });
@@ -774,7 +818,7 @@ section("13. End to end via the CLI in fixture + dry-run mode");
   check("status reports all pending qualified videos", /qualified\s+8/.test(status), status.trim());
 }
 
-section("14. End to end selective transcription");
+section("15. End to end selective transcription");
 {
   rmSync(`${TMP}/selective.db`, { force: true });
   rmSync("out", { recursive: true, force: true });
@@ -850,7 +894,7 @@ section("14. End to end selective transcription");
   selectiveStore.close();
 }
 
-section("15. Config validation");
+section("16. Config validation");
 {
   writeFileSync(`${TMP}/bad.yml`, "sources:\n  instagram: []\n  tiktok: []\n");
   let threw = false;
@@ -895,7 +939,7 @@ section("15. Config validation");
   );
 }
 
-section("16. Apify authentication, retry, and spend guard");
+section("17. Apify authentication, retry, and spend guard");
 {
   const { assertSpendUnderLimit, runActorSync, SpendGuardError } = await import("../src/apify.js");
   const realFetch = globalThis.fetch;
@@ -1011,7 +1055,7 @@ section("16. Apify authentication, retry, and spend guard");
   globalThis.fetch = realFetch;
 }
 
-section("17. DST-safe schedule guard");
+section("18. DST-safe schedule guard");
 {
   const hourIn = (iso: string) =>
     Number(
@@ -1031,7 +1075,7 @@ section("17. DST-safe schedule guard");
   check("winter 12:00 UTC is 7am in New York", hourIn("2026-12-07T12:00:00Z") === 7);
 }
 
-section("18. Pruning keeps dedup keys forever");
+section("19. Pruning keeps dedup keys forever");
 {
   const store = new Store(`${TMP}/prune.db`);
   const v = normalizeInstagram([reel({ id: "pr1", shortCode: "PR1" })])[0];

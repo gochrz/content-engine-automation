@@ -8,7 +8,7 @@ import {
   buildInstagramTranscriptInput,
   normalizeInstagram,
 } from "./adapters/instagram.js";
-import { evaluate, selectTop } from "./rank.js";
+import { refreshCandidates, selectTop } from "./rank.js";
 import { generateScripts } from "./generate.js";
 import { renderEmail, renderText, sendEmail, formatDate } from "./deliver.js";
 import { prepareCandidatesForGeneration } from "./transcribe.js";
@@ -128,15 +128,7 @@ async function cmdDiscover() {
 
     console.log(`[discover] ${videos.length} seen, ${inserted} new`);
 
-    let qualified = 0;
-    for (const video of store.openVideos()) {
-      const ev = evaluate(store, video, cfg, now);
-      store.setState(video.platform, video.platform_id, ev.nextState, {
-        rejectReason: ev.reason ?? undefined,
-        score: ev.candidate?.score,
-      });
-      if (ev.nextState === "qualified") qualified++;
-    }
+    const qualified = refreshCandidates(store, cfg, now).length;
 
     console.log(`[discover] ${qualified} qualified for scripting`);
     store.finishRun(runId, new Date().toISOString(), "discovered", {
@@ -173,12 +165,7 @@ async function cmdPublish() {
     }
     if (!existingRun) store.startRun(runId, now.toISOString());
 
-    const candidates: Candidate[] = [];
-    for (const video of store.openVideos()) {
-      if (video.state !== "qualified") continue;
-      const ev = evaluate(store, video, cfg, now);
-      if (ev.candidate) candidates.push(ev.candidate);
-    }
+    const candidates: Candidate[] = refreshCandidates(store, cfg, now);
 
     if (candidates.length === 0) {
       console.log("[publish] nothing qualified; no email sent");

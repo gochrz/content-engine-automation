@@ -25,12 +25,12 @@ discovery:
   skipPinnedPosts: true
 
 qualification:
-  minPlays: 20000
-  minLikes: 1000
+  minPlays: 2000
+  minLikes: 50
   minDurationSeconds: 12
   minTranscriptWords: 40
   observationRuns: 2
-  minVelocityPlaysPerDay: 1500
+  minVelocityPlaysPerDay: 300
   maxAgeDaysToQualify: 45
 
 generation:
