@@ -125,7 +125,9 @@ npm run status
 npm run prune
 ```
 
-If a workflow fails, open the failed run and use **Re-run failed jobs**. Completed discovery for that GitHub run is reused. A run already recorded as previewed, empty, or delivered is not generated again.
+If discovery was already committed before a later step failed, start a new manual run with both **Generate a preview without sending email** and **Reuse previously saved discovery state** checked. This skips another profile scrape and resumes from the qualified Reels already stored in the repository.
+
+For other temporary failures, open the failed run and use **Re-run failed jobs**. A run already recorded as previewed, empty, or delivered is not generated again.
 
 Failure alerts are sent through the same Gmail account when those credentials are available.
 

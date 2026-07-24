@@ -65,9 +65,13 @@ export async function runActorSync<T = unknown>(
   token: string,
   actorId: string,
   input: Record<string, unknown>,
-  maxItems: number,
+  maxItems?: number,
 ): Promise<T[]> {
-  const url = `${BASE}/acts/${actorPath(actorId)}/run-sync-get-dataset-items?maxItems=${encodeURIComponent(String(maxItems))}`;
+  const endpoint = `${BASE}/acts/${actorPath(actorId)}/run-sync-get-dataset-items`;
+  const url =
+    maxItems === undefined
+      ? endpoint
+      : `${endpoint}?maxItems=${encodeURIComponent(String(maxItems))}`;
   const init = authorized(token, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

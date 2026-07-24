@@ -10,6 +10,10 @@ on:
         description: "Generate a preview without sending email"
         type: boolean
         default: false
+      reuse_saved_discovery:
+        description: "Reuse previously saved discovery state"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -53,13 +57,13 @@ jobs:
           git config user.email "content-engine@users.noreply.github.com"
 
       - name: Discover and rank videos
-        if: steps.guard.outputs.proceed == 'true'
+        if: steps.guard.outputs.proceed == 'true' && inputs.reuse_saved_discovery != true
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: npm run discover
 
       - name: Commit discovery state
-        if: steps.guard.outputs.proceed == 'true'
+        if: steps.guard.outputs.proceed == 'true' && inputs.reuse_saved_discovery != true
         run: |
           git add state/engine.db
           git diff --staged --quiet || git commit -m "state: discovery ${{ github.run_id }}"

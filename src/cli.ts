@@ -73,7 +73,6 @@ async function fetchInstagramTranscripts(
     token,
     INSTAGRAM_ACTOR,
     buildInstagramTranscriptInput(urls),
-    urls.length,
   );
   return normalizeInstagram(items, { transcriptRequested: true });
 }
@@ -172,6 +171,7 @@ async function cmdPublish() {
       );
       return;
     }
+    if (!existingRun) store.startRun(runId, now.toISOString());
 
     const candidates: Candidate[] = [];
     for (const video of store.openVideos()) {

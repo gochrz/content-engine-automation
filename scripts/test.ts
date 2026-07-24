@@ -826,14 +826,28 @@ section("14. End to end selective transcription");
   const discovery = execFileSync(node, [...args, "discover"], { env, encoding: "utf8" });
   check("metadata-only discovery qualifies both viral Reels", /2 qualified/.test(discovery), discovery.trim());
 
-  const publish = execFileSync(node, [...args, "publish"], { env, encoding: "utf8" });
+  rmSync(".run-id", { force: true });
+  const publishEnv = { ...env, GITHUB_RUN_ID: "selective-resume-run" };
+  const publish = execFileSync(node, [...args, "publish"], {
+    env: publishEnv,
+    encoding: "utf8",
+  });
   const preview = readFileSync("out/preview.html", "utf8");
   check("only the spoken Reel becomes a script", /1 scripts/.test(publish) && /Script 1 &middot;/.test(preview), publish.trim());
   check("the fetched transcript is included in the report", preview.includes("So I get a call about a property"));
 
-  const status = execFileSync(node, [...args, "status"], { env, encoding: "utf8" });
+  const status = execFileSync(node, [...args, "status"], {
+    env: publishEnv,
+    encoding: "utf8",
+  });
   check("music-only Reels are rejected", /rejected\s+1/.test(status), status.trim());
   check("the previewed spoken Reel remains qualified", /qualified\s+1/.test(status), status.trim());
+  const selectiveStore = new Store(`${TMP}/selective.db`);
+  check(
+    "publish-only recovery records the new workflow run",
+    selectiveStore.getRun("selective-resume-run")?.status === "preview",
+  );
+  selectiveStore.close();
 }
 
 section("15. Config validation");
@@ -865,6 +879,11 @@ section("15. Config validation");
   check(
     "state synchronization does not hide pull failures",
     !workflow.includes("git pull --rebase --autostash || true"),
+  );
+  check(
+    "a manual recovery can reuse saved discovery",
+    workflow.includes("reuse_saved_discovery:") &&
+      workflow.includes("inputs.reuse_saved_discovery != true"),
   );
 
   const voiceGuide = readFileSync("voice/seth-voice-guide.md", "utf8");
@@ -914,6 +933,28 @@ section("16. Apify authentication, retry, and spend guard");
   );
   check("sends the Apify token in the authorization header", authorization === "Bearer secret-token");
   check("retries one temporary actor failure", actorAttempts === 2 && actorItems.length === 1);
+
+  let uncappedUrl = "";
+  globalThis.fetch = (async (url: string) => {
+    uncappedUrl = url;
+    return {
+      ok: true,
+      status: 200,
+      json: async () => [],
+      text: async () => "",
+    };
+  }) as never;
+  await runActorSync(
+    "secret-token",
+    "apify/instagram-reel-scraper",
+    { directUrls: ["https://www.instagram.com/reel/example/"] },
+    undefined as never,
+  );
+  check(
+    "small selected batches omit the invalid Apify dataset cap",
+    !uncappedUrl.includes("maxItems="),
+    uncappedUrl,
+  );
 
   const stub = (payload: unknown, ok = true) => {
     globalThis.fetch = (async () =>
