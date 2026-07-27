@@ -12,6 +12,7 @@ import { refreshCandidates, selectTop } from "./rank.js";
 import { generateScripts } from "./generate.js";
 import { renderEmail, renderText, sendEmail, formatDate } from "./deliver.js";
 import { prepareCandidatesForGeneration } from "./transcribe.js";
+import { renderDocxReport, reportFilename } from "./report-docx.js";
 import type { Candidate, Config, RawVideo, Script } from "./types.js";
 
 const DB_PATH = process.env.DB_PATH ?? "state/engine.db";
@@ -239,20 +240,30 @@ async function cmdPublish() {
 
     const html = renderEmail(scripts, cfg, now);
     const text = renderText(scripts);
+    const report = await renderDocxReport(scripts, cfg, now);
+    const reportName = reportFilename(now, cfg.delivery.timezone);
     const subject = `${cfg.delivery.subjectPrefix} — ${formatDate(now, cfg.delivery.timezone)}`;
 
     if (dryRun) {
       writeFileSync("out/preview.html", html);
       writeFileSync("out/preview.txt", text);
-      console.log(`[publish] dry run: wrote out/preview.html (${scripts.length} scripts)`);
+      writeFileSync(`out/${reportName}`, report);
+      console.log(
+        `[publish] dry run: wrote out/preview.html and ${reportName} (${scripts.length} scripts)`,
+      );
     } else {
       const user = requireEnv("GMAIL_USER");
       const messageId = await sendEmail(html, text, subject, cfg, {
         user,
         pass: requireEnv("GMAIL_APP_PASSWORD"),
         from: process.env.GMAIL_FROM ?? user,
+      }, {
+        filename: reportName,
+        content: report,
       });
-      console.log(`[publish] sent ${scripts.length} scripts (${messageId})`);
+      console.log(
+        `[publish] sent ${scripts.length} scripts with ${reportName} (${messageId})`,
+      );
     }
 
     if (!dryRun) {

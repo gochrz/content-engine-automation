@@ -101,6 +101,7 @@ export async function sendEmail(
   subject: string,
   cfg: Config,
   creds: { user: string; pass: string; from: string },
+  report: { filename: string; content: Buffer },
 ) {
   const transport = nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -117,6 +118,14 @@ export async function sendEmail(
     subject,
     text,
     html,
+    attachments: [
+      {
+        filename: report.filename,
+        content: report.content,
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      },
+    ],
   });
 
   return info.messageId;

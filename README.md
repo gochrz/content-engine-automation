@@ -12,7 +12,7 @@ It runs in GitHub Actions every Monday, Wednesday, and Friday at approximately 7
 4. It asks Apify for transcripts only for the selected Reels, up to 10 per run.
 5. Reels with no usable spoken transcript are rejected, so music-only videos do not become scripts.
 6. OpenAI writes a new script and two-part caption using Seth's real voice guide. The source idea can be reused, but its wording cannot.
-7. The email includes the adapted script, caption, source link, performance numbers, and source transcript.
+7. The email includes the adapted script, caption, source link, performance numbers, and source transcript, plus a formatted Word document that opens in Google Docs.
 8. After a successful live email, those Reels are marked complete so they are not scripted again.
 
 The current source list is in `config.yml`. TikTok is intentionally not active yet because no TikTok watchlist was supplied.
@@ -64,7 +64,7 @@ Use a preview before enabling normal delivery:
 2. Check **Generate a preview without sending email**.
 3. Start the workflow.
 4. Download the `preview` artifact from the completed run.
-5. Open `preview.html` and review every script, caption, source link, performance summary, and transcript.
+5. Open `preview.html` and the generated `.docx` report to review every script, caption, source link, performance summary, and transcript.
 6. If the report is good, run the workflow again with preview unchecked.
 7. Confirm the message arrives at `ben@gochrz.com`.
 
