@@ -2,11 +2,11 @@
 
 This project finds promising Instagram Reels from a fixed real-estate watchlist, adapts the strongest ideas into Seth Caslin's voice, and emails a ready-to-record report to `ben@gochrz.com`.
 
-It runs in GitHub Actions every Monday, Wednesday, and Friday at approximately 7:00 a.m. New York time. GitHub can start scheduled work several minutes late, which is acceptable for this morning report.
+It runs in GitHub Actions every Monday, Wednesday, and Friday at approximately 7:17 a.m. New York time. The off-peak minute reduces the risk of GitHub delaying or dropping the scheduled event.
 
 ## What happens on each run
 
-1. The engine asks Apify for up to 8 recent Reels from each of the 7 configured profiles: a maximum of 56 lightweight records.
+1. The engine asks Apify for up to 8 recent Reels from each of the 17 configured profiles: a maximum of 136 lightweight records.
 2. It stores views, likes, comments, age, and growth history without buying transcripts for every Reel.
 3. It ranks the strongest videos by momentum and engagement, with a strict maximum of 2 selections per creator.
 4. It asks Apify for transcripts only for the selected Reels, up to 10 per run.
@@ -19,7 +19,7 @@ The current source list is in `config.yml`. TikTok is intentionally not active y
 
 ## Cost controls
 
-The expensive transcript option is disabled during the 56-Reel discovery pass. It is enabled only for the shortlist.
+The expensive transcript option is disabled during the 136-Reel discovery pass. It is enabled only for the shortlist.
 
 The project stops before an Apify call when reported month-to-date usage reaches `$55`. Set a separate hard custom usage limit of `$60` in Apify Billing. The Apify plan and the custom usage limit are separate settings; the project cannot enforce the account-level limit for you.
 
@@ -72,11 +72,11 @@ A preview does not mark selected Reels complete. A later live run can still deli
 
 ## Schedule
 
-The workflow has two possible UTC start times on Monday, Wednesday, and Friday. A local-time check allows exactly one to continue at 7:00 a.m. in `America/New_York`, including daylight-saving changes.
+The workflow uses GitHub's timezone-aware scheduling to start at 7:17 a.m. in `America/New_York` every Monday, Wednesday, and Friday, including daylight-saving changes.
 
 To change the schedule, update both:
 
-- the two `cron` entries in `.github/workflows/content-engine.yml`
+- the `cron` and `timezone` entry in `.github/workflows/content-engine.yml`
 - `delivery.hour` and `delivery.timezone` in `config.yml`
 
 ## Configuration

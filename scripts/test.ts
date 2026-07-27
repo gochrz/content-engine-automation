@@ -1055,24 +1055,13 @@ section("17. Apify authentication, retry, and spend guard");
   globalThis.fetch = realFetch;
 }
 
-section("18. DST-safe schedule guard");
+section("18. Timezone-aware off-peak schedule");
 {
-  const hourIn = (iso: string) =>
-    Number(
-      new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/New_York",
-        hour: "numeric",
-        hour12: false,
-      }).format(new Date(iso)),
-    );
-
-  const dates = ["2026-07-27", "2026-12-07", "2026-11-02", "2026-03-15", "2027-01-04"];
-  const allSingle = dates.every(
-    (d) => ["11", "12"].filter((h) => hourIn(`${d}T${h}:00:00Z`) === 7).length === 1,
-  );
-  check("exactly one cron trigger lands on 7am local, year round", allSingle);
-  check("summer 11:00 UTC is 7am in New York", hourIn("2026-07-27T11:00:00Z") === 7);
-  check("winter 12:00 UTC is 7am in New York", hourIn("2026-12-07T12:00:00Z") === 7);
+  const workflow = readFileSync(".github/workflows/content-engine.yml", "utf8");
+  const schedules = workflow.match(/cron:/g) ?? [];
+  check("uses one scheduled trigger", schedules.length === 1);
+  check("runs away from GitHub's top-of-hour peak", workflow.includes('cron: "17 7 * * 1,3,5"'));
+  check("uses New York time across daylight-saving changes", workflow.includes('timezone: "America/New_York"'));
 }
 
 section("19. Pruning keeps dedup keys forever");
