@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+  existsSync,
+  readFileSync,
+} from "node:fs";
 import {
   buildInstagramInput,
   buildInstagramTranscriptInput,
@@ -19,6 +26,7 @@ import {
 } from "../src/transcribe.js";
 import { buildOpenAIRequest, generateScripts } from "../src/generate.js";
 import { renderEmail, renderText } from "../src/deliver.js";
+import { renderDocxReport, reportFilename } from "../src/report-docx.js";
 import { loadConfig } from "../src/config.js";
 import type { Candidate } from "../src/types.js";
 
@@ -666,6 +674,15 @@ section("12. Email rendering");
   ];
   const html = renderEmail(scripts, cfg, new Date("2026-07-27T12:00:00Z"));
   const text = renderText(scripts);
+  const report = await renderDocxReport(scripts, cfg, new Date("2026-07-27T12:00:00Z"));
+  const reportPath = `${TMP}/report.docx`;
+  writeFileSync(reportPath, report);
+  let validDocx = true;
+  try {
+    execFileSync("unzip", ["-t", reportPath], { stdio: "ignore" });
+  } catch {
+    validDocx = false;
+  }
 
   check("escapes html in script bodies", !html.includes("<script>alert"));
   check("includes the escaped payload", html.includes("&lt;script&gt;"));
@@ -675,6 +692,12 @@ section("12. Email rendering");
   check("renders the two-part caption", html.includes("Tag a friend who needs to see this."));
   check("formats the date in the configured timezone", html.includes("July 27, 2026"));
   check("plain text alternative is non-empty", text.includes("Roof math"));
+  check("builds a valid DOCX report", validDocx && report.length > 5000);
+  check(
+    "uses a dated DOCX attachment name",
+    reportFilename(new Date("2026-07-27T12:00:00Z"), cfg.delivery.timezone) ===
+      "Seth Content Scripts - 2026-07-27.docx",
+  );
 }
 
 section("13. Script audit storage");
@@ -768,6 +791,10 @@ section("14. End to end via the CLI in fixture + dry-run mode");
   check("publish selects and writes a preview", existsSync("out/preview.html"), p1.trim());
   const preview = readFileSync("out/preview.html", "utf8");
   check("preview contains 7 scripts", (preview.match(/Script \d+ &middot;/g) ?? []).length === 7);
+  check(
+    "preview includes the formatted DOCX report",
+    readdirSync("out").some((name) => name.endsWith(".docx")),
+  );
 
   const repeatedPublish = execFileSync(node, [...args, "publish"], {
     env,
@@ -1055,24 +1082,13 @@ section("17. Apify authentication, retry, and spend guard");
   globalThis.fetch = realFetch;
 }
 
-section("18. DST-safe schedule guard");
+section("18. Timezone-aware off-peak schedule");
 {
-  const hourIn = (iso: string) =>
-    Number(
-      new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/New_York",
-        hour: "numeric",
-        hour12: false,
-      }).format(new Date(iso)),
-    );
-
-  const dates = ["2026-07-27", "2026-12-07", "2026-11-02", "2026-03-15", "2027-01-04"];
-  const allSingle = dates.every(
-    (d) => ["11", "12"].filter((h) => hourIn(`${d}T${h}:00:00Z`) === 7).length === 1,
-  );
-  check("exactly one cron trigger lands on 7am local, year round", allSingle);
-  check("summer 11:00 UTC is 7am in New York", hourIn("2026-07-27T11:00:00Z") === 7);
-  check("winter 12:00 UTC is 7am in New York", hourIn("2026-12-07T12:00:00Z") === 7);
+  const workflow = readFileSync(".github/workflows/content-engine.yml", "utf8");
+  const schedules = workflow.match(/cron:/g) ?? [];
+  check("uses one scheduled trigger", schedules.length === 1);
+  check("runs away from GitHub's top-of-hour peak", workflow.includes('cron: "17 7 * * 1,3,5"'));
+  check("uses New York time across daylight-saving changes", workflow.includes('timezone: "America/New_York"'));
 }
 
 section("19. Pruning keeps dedup keys forever");
