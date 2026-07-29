@@ -132,6 +132,7 @@ export async function runDispatcher(options) {
             dry_run: dryRun,
             reuse_saved_discovery: reuseSavedDiscovery,
             dispatch_id: dispatchId,
+            dispatcher_test: mode === "test",
           },
         }),
       });

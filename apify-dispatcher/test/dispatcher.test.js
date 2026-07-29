@@ -52,6 +52,8 @@ test("dispatches and monitors a successful GitHub run", async () => {
   assert.equal(result.dryRun, true);
   assert.equal(result.reuseSavedDiscovery, true);
   assert.equal(requests.filter(({ url }) => url.endsWith("/dispatches")).length, 1);
+  const dispatchRequest = requests.find(({ url }) => url.endsWith("/dispatches"));
+  assert.equal(JSON.parse(dispatchRequest.init.body).inputs.dispatcher_test, true);
 });
 
 test("reuses an existing scheduled run instead of dispatching twice", async () => {
