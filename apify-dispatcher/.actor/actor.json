@@ -1,0 +1,7 @@
+{
+  "actorSpecification": 1,
+  "name": "seth-content-engine-dispatcher",
+  "title": "Seth Content Engine Dispatcher",
+  "version": "1.0",
+  "input": "./input_schema.json"
+}

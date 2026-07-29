@@ -1,0 +1,34 @@
+{
+  "title": "Seth Content Engine Dispatcher",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Run mode",
+      "type": "string",
+      "description": "Use Safe test while validating the connection. Use Live schedule for automatic report delivery.",
+      "editor": "select",
+      "default": "schedule",
+      "enum": [
+        "schedule",
+        "test"
+      ],
+      "enumTitles": [
+        "Live schedule",
+        "Safe test"
+      ]
+    },
+    "maxWaitMinutes": {
+      "title": "Maximum wait time",
+      "type": "integer",
+      "description": "How long to monitor the GitHub workflow before failing visibly.",
+      "editor": "number",
+      "default": 75,
+      "minimum": 1,
+      "maximum": 90
+    }
+  },
+  "required": [
+    "mode"
+  ]
+}
