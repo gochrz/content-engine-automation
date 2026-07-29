@@ -2,7 +2,7 @@
 
 This project finds promising Instagram Reels from a fixed real-estate watchlist, adapts the strongest ideas into Seth Caslin's voice, and emails a ready-to-record report to `ben@gochrz.com`.
 
-It runs in GitHub Actions every Monday, Wednesday, and Friday at approximately 7:17 a.m. New York time. The off-peak minute reduces the risk of GitHub delaying or dropping the scheduled event.
+Apify starts it every Monday, Wednesday, and Friday at 7:05 a.m. New York time. A private dispatcher then starts the GitHub workflow, follows that exact run, and reports a failure if GitHub does not complete successfully.
 
 ## What happens on each run
 
@@ -72,12 +72,19 @@ A preview does not mark selected Reels complete. A later live run can still deli
 
 ## Schedule
 
-The workflow uses GitHub's timezone-aware scheduling to start at 7:17 a.m. in `America/New_York` every Monday, Wednesday, and Friday, including daylight-saving changes.
+Apify is the only automatic scheduler. GitHub accepts manual and Apify-triggered runs but does not keep a second timer.
 
-To change the schedule, update both:
+- Schedule: `Seth Content Engine - MWF 7:05 AM ET`
+- Schedule ID: `0pLF1tcAGikPb04FR`
+- Actor: `seth_caslin/content-engine-automation`
+- Actor ID: `Xk4sBKzvjiqOsilze`
+- Timing: Monday, Wednesday, and Friday at 7:05 a.m. in `America/New_York`
+- Duplicate protection: Apify does not start a new Actor while the previous scheduled Actor is still running
+- Dispatcher limit: 75 minutes, 256 MB memory, and no more than `$0.10` per dispatcher run
 
-- the `cron` and `timezone` entry in `.github/workflows/content-engine.yml`
-- `delivery.hour` and `delivery.timezone` in `config.yml`
+The dispatcher stores the GitHub credential as the masked `GITHUB_TOKEN` environment variable in the private Apify Actor. Renew that token before its current October 27, 2026 expiration and replace the masked value in the Actor settings.
+
+To change the delivery time, update the Apify schedule and keep `delivery.hour` and `delivery.timezone` in `config.yml` aligned.
 
 ## Configuration
 
@@ -131,6 +138,6 @@ For other temporary failures, open the failed run and use **Re-run failed jobs**
 
 Failure alerts are sent through the same Gmail account when those credentials are available.
 
-## Current boundary
+## Verified operation
 
-The implementation and representative end-to-end flow can be tested locally without secrets. The first real Apify scrape, real OpenAI generation, and Gmail delivery still need to be confirmed from Ben's repository after the four secrets and Apify custom usage limit are configured.
+The full live workflow has completed from Ben's repository with real Apify, OpenAI, and Gmail credentials. On July 29, 2026, the Apify schedule also fired automatically and completed a safe GitHub validation run without scraping, generating content, or sending email. The next unattended live run is Friday, July 31, 2026 at 7:05 a.m. New York time.

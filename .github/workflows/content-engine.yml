@@ -3,9 +3,6 @@ name: Seth Content Engine
 run-name: Seth Content Engine — ${{ inputs.dispatch_id || github.event_name }}
 
 on:
-  schedule:
-    - cron: "17 7 * * 1,3,5"
-      timezone: "America/New_York"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -57,33 +54,19 @@ jobs:
 
       - run: npm ci
 
-      - name: Check local delivery hour
-        id: guard
-        run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if npm run --silent guard; then
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Configure git
-        if: steps.guard.outputs.proceed == 'true'
         run: |
           git config user.name "content-engine"
           git config user.email "content-engine@users.noreply.github.com"
 
       - name: Discover and rank videos
-        if: steps.guard.outputs.proceed == 'true' && inputs.reuse_saved_discovery != true
+        if: inputs.reuse_saved_discovery != true
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: npm run discover
 
       - name: Commit discovery state
-        if: steps.guard.outputs.proceed == 'true' && inputs.reuse_saved_discovery != true
+        if: inputs.reuse_saved_discovery != true
         run: |
           git add state/engine.db
           git diff --staged --quiet || git commit -m "state: discovery ${{ github.run_id }}"
@@ -91,7 +74,6 @@ jobs:
           git push
 
       - name: Generate and deliver scripts
-        if: steps.guard.outputs.proceed == 'true'
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -104,11 +86,9 @@ jobs:
           npm run publish
 
       - name: Prune old state
-        if: steps.guard.outputs.proceed == 'true'
         run: npm run prune
 
       - name: Commit delivery state
-        if: steps.guard.outputs.proceed == 'true'
         run: |
           git add state/engine.db
           git diff --staged --quiet || git commit -m "state: delivery ${{ github.run_id }}"
@@ -124,7 +104,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Alert on failure
-        if: failure() && steps.guard.outputs.proceed == 'true'
+        if: failure()
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}

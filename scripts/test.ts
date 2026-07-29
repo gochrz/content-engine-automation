@@ -1082,13 +1082,27 @@ section("17. Apify authentication, retry, and spend guard");
   globalThis.fetch = realFetch;
 }
 
-section("18. Timezone-aware off-peak schedule");
+section("18. External Apify scheduler contract");
 {
   const workflow = readFileSync(".github/workflows/content-engine.yml", "utf8");
-  const schedules = workflow.match(/cron:/g) ?? [];
-  check("uses one scheduled trigger", schedules.length === 1);
-  check("runs away from GitHub's top-of-hour peak", workflow.includes('cron: "17 7 * * 1,3,5"'));
-  check("uses New York time across daylight-saving changes", workflow.includes('timezone: "America/New_York"'));
+  const dispatcher = readFileSync("apify-dispatcher/src/dispatcher.js", "utf8");
+  const inputSchema = readFileSync("apify-dispatcher/.actor/input_schema.json", "utf8");
+  check("GitHub has no competing scheduled trigger", !workflow.includes("\n  schedule:"));
+  check(
+    "the workflow accepts verified external dispatches",
+    workflow.includes("workflow_dispatch:") &&
+      workflow.includes("dispatch_id:") &&
+      workflow.includes("dispatcher_test:"),
+  );
+  check(
+    "the dispatcher uses New York dates and stable daily identifiers",
+    dispatcher.includes('timezone: "America/New_York"') &&
+      dispatcher.includes("apify-schedule-${date}"),
+  );
+  check(
+    "the Actor exposes separate live and safe-test modes",
+    inputSchema.includes('"schedule"') && inputSchema.includes('"test"'),
+  );
 }
 
 section("19. Pruning keeps dedup keys forever");
