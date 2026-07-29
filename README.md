@@ -81,7 +81,7 @@ Apify is the only automatic scheduler. GitHub accepts manual and Apify-triggered
 - Timing: Monday, Wednesday, and Friday at 7:05 a.m. in `America/New_York`
 - Duplicate protection: Apify does not start a new Actor while the previous scheduled Actor is still running
 - Dispatcher limit: 75 minutes, 256 MB memory, and no more than `$0.10` per dispatcher run
-- Failure alert: failed, timed-out, or aborted dispatcher runs send email and Apify Console notifications to `manuelg9704@gmail.com`
+- Failure alert: failed, timed-out, or aborted dispatcher runs send email to the configured operator and appear in Apify Console
 
 The dispatcher stores the GitHub credential as the masked `GITHUB_TOKEN` environment variable in the private Apify Actor. Renew that token before its current October 27, 2026 expiration and replace the masked value in the Actor settings.
 
